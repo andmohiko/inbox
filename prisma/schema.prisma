@@ -42,9 +42,9 @@ enum ItemStatus {
  */
 model User {
   /**
-   * ユーザーID (CUID)
+   * ユーザーID (Supabaseの認証ユーザーIDと同じUUID)
    */
-  id String @id @default(cuid())
+  id String @id
 
   /**
    * メールアドレス (一意制約)
