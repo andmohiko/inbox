@@ -1,0 +1,153 @@
+/**
+ * Prismaスキーマ定義
+ * 概要:
+ * - Inbox管理アプリケーションのデータベーススキーマ
+ * - ユーザー認証とタスク管理機能を提供
+ * 主な仕様:
+ * - User: Google認証によるユーザー情報を管理
+ * - Item: Todo(Inbox)とやりたいことリスト(Backlog)の両方を管理
+ * - due_dateがnullの場合はやりたいことリスト(Backlog)
+ * - due_dateが設定されている場合はTodo(Inbox)
+ * 制限事項:
+ * - 初期版ではシングルユーザー専用
+ * - ソフトデリート機能を実装(deleted_atフィールド)
+ */
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * タスクのステータスを定義する列挙型
+ * - TODO: 未着手
+ * - IN_PROGRESS: 進行中
+ * - IN_REVIEW: 相手待ち
+ * - DONE: 完了
+ */
+enum ItemStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+/**
+ * ユーザーモデル
+ * Google認証により作成されるユーザー情報を管理
+ */
+model User {
+  /**
+   * ユーザーID (CUID)
+   */
+  id String @id @default(cuid())
+
+  /**
+   * メールアドレス (一意制約)
+   */
+  email String @unique
+
+  /**
+   * ユーザー名
+   */
+  name String?
+
+  /**
+   * 作成日時
+   */
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /**
+   * 更新日時
+   */
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /**
+   * ユーザーが所有するアイテム一覧
+   */
+  items Item[]
+
+  @@map("users")
+}
+
+/**
+ * アイテムモデル
+ * Todo(Inbox)とやりたいことリスト(Backlog)の両方を管理
+ * - due_dateがnull: やりたいことリスト(Backlog)
+ * - due_dateが設定: Todo(Inbox)
+ */
+model Item {
+  /**
+   * アイテムID (CUID)
+   */
+  id String @id @default(cuid())
+
+  /**
+   * ユーザーID (外部キー)
+   */
+  userId String @map("user_id")
+
+  /**
+   * タスク名(タイトル)
+   */
+  title String
+
+  /**
+   * 説明文(任意)
+   */
+  description String?
+
+  /**
+   * 期日
+   * - nullの場合: やりたいことリスト(Backlog)に表示
+   * - 設定されている場合: Todo(Inbox)に表示
+   */
+  dueDate DateTime? @map("due_date")
+
+  /**
+   * ステータス
+   * - やりたいことリスト(Backlog)のアイテムには適用されない
+   * - Todo(Inbox)のアイテムのみ有効
+   */
+  status ItemStatus @default(TODO)
+
+  /**
+   * 表示順序
+   * - Inbox: キュー構造(下に追加)のため、この値で並び替え
+   * - Backlog: スタック構造(上に追加)のため、この値で並び替え(降順)
+   */
+  order Int @default(0)
+
+  /**
+   * 完了日時
+   * - ステータスがDONEになった際に設定
+   */
+  completedAt DateTime? @map("completed_at")
+
+  /**
+   * 削除日時(ソフトデリート)
+   * - nullでない場合、削除済みとして扱う
+   */
+  deletedAt DateTime? @map("deleted_at")
+
+  /**
+   * 作成日時
+   */
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /**
+   * 更新日時
+   */
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /**
+   * ユーザーへのリレーション
+   */
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("items")
+}
