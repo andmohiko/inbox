@@ -1,51 +1,61 @@
-"use client"
+'use client'
 
-import { useDate } from "@/app/hooks/useDate"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useDate } from '@/app/hooks/useDate'
+import { Button } from '@/components/ui/button'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import dayjs from 'dayjs'
+import 'dayjs/locale/ja'
 
 export function DateNavigation() {
   const { currentDate, setCurrentDate } = useDate()
 
-  const formatDisplayDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const targetDate = new Date(dateStr)
-    targetDate.setHours(0, 0, 0, 0)
+  const formatDisplayDate = (dateStr: string | Date) => {
+    const targetDate = dayjs(dateStr).locale('ja').startOf('day')
+    const today = dayjs().startOf('day')
+    const diffDays = targetDate.diff(today, 'day')
 
-    const diffTime = targetDate.getTime() - today.getTime()
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+    const dayName = targetDate.format('dd')
+    const dateStrFormatted = targetDate.format('M/D')
 
-    const dayNames = ["日", "月", "火", "水", "木", "金", "土"]
-    const dayName = dayNames[date.getDay()]
+    if (diffDays === 0) return `今日 (${dateStrFormatted} ${dayName})`
+    if (diffDays === 1) return `明日 (${dateStrFormatted} ${dayName})`
+    if (diffDays === -1) return `昨日 (${dateStrFormatted} ${dayName})`
 
-    if (diffDays === 0) return `今日 (${date.getMonth() + 1}/${date.getDate()} ${dayName})`
-    if (diffDays === 1) return `明日 (${date.getMonth() + 1}/${date.getDate()} ${dayName})`
-    if (diffDays === -1) return `昨日 (${date.getMonth() + 1}/${date.getDate()} ${dayName})`
-
-    return `${date.getMonth() + 1}/${date.getDate()} (${dayName})`
+    return `${dateStrFormatted} (${dayName})`
   }
 
-  const navigateDate = (direction: "prev" | "next") => {
-    const date = new Date(currentDate)
-    date.setDate(date.getDate() + (direction === "next" ? 1 : -1))
-    setCurrentDate(date.toISOString().split("T")[0])
+  const navigateDate = (direction: 'prev' | 'next') => {
+    const date = dayjs(currentDate)
+    const newDate =
+      direction === 'next' ? date.add(1, 'day') : date.subtract(1, 'day')
+    setCurrentDate(newDate.toDate())
   }
 
   const goToToday = () => {
-    setCurrentDate(new Date().toISOString().split("T")[0])
+    setCurrentDate(dayjs().toDate())
   }
 
   return (
     <div className="flex items-center justify-center gap-2 py-4">
-      <Button variant="outline" size="icon" onClick={() => navigateDate("prev")}>
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => navigateDate('prev')}
+      >
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" onClick={goToToday} className="min-w-[160px] font-medium">
+      <Button
+        variant="ghost"
+        onClick={goToToday}
+        className="min-w-[160px] font-medium"
+      >
         {formatDisplayDate(currentDate)}
       </Button>
-      <Button variant="outline" size="icon" onClick={() => navigateDate("next")}>
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => navigateDate('next')}
+      >
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
