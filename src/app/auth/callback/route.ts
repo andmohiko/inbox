@@ -25,13 +25,28 @@ import type { NextRequest } from 'next/server'
 
 /**
  * アプリケーションのベースURLを取得
- * 環境変数が設定されていない場合は、リクエストのオリジンを使用
+ * 環境変数が設定されている場合はそれを使用、未設定の場合はリクエストヘッダーから取得
  *
- * @param {string} requestOrigin - リクエストのオリジン
+ * @param {NextRequest} request - Next.jsのリクエストオブジェクト
  * @returns {string} アプリケーションのベースURL
  */
-function getAppUrl(requestOrigin: string): string {
-  return process.env.NEXT_PUBLIC_APP_URL || requestOrigin
+function getAppUrl(request: NextRequest): string {
+  // 環境変数が設定されている場合はそれを使用
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+
+  // リクエストヘッダーから実際のホストを取得
+  const host = request.headers.get('host')
+  const protocol = request.headers.get('x-forwarded-proto') || 'https'
+
+  if (host) {
+    // 本番環境では通常httpsを使用
+    return `${protocol}://${host}`
+  }
+
+  // フォールバック: リクエストURLのオリジンを使用
+  return new URL(request.url).origin
 }
 
 /**
@@ -43,7 +58,7 @@ function getAppUrl(requestOrigin: string): string {
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const appUrl = getAppUrl(requestUrl.origin)
+  const appUrl = getAppUrl(request)
 
   if (code) {
     const supabase = await createClient()
