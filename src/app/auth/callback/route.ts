@@ -24,6 +24,17 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 /**
+ * アプリケーションのベースURLを取得
+ * 環境変数が設定されていない場合は、リクエストのオリジンを使用
+ *
+ * @param {string} requestOrigin - リクエストのオリジン
+ * @returns {string} アプリケーションのベースURL
+ */
+function getAppUrl(requestOrigin: string): string {
+  return process.env.NEXT_PUBLIC_APP_URL || requestOrigin
+}
+
+/**
  * OAuth認証コールバックを処理
  *
  * @param {NextRequest} request - Next.jsのリクエストオブジェクト
@@ -32,6 +43,7 @@ import type { NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const appUrl = getAppUrl(requestUrl.origin)
 
   if (code) {
     const supabase = await createClient()
@@ -45,9 +57,7 @@ export async function GET(request: NextRequest) {
         errorCode: error.status,
       })
       // エラー時はログインページにリダイレクト
-      return NextResponse.redirect(
-        new URL('/login?error=auth_failed', request.url),
-      )
+      return NextResponse.redirect(new URL('/login?error=auth_failed', appUrl))
     }
 
     // 認証成功後、ユーザー情報をPrismaのusersテーブルに保存
@@ -76,5 +86,5 @@ export async function GET(request: NextRequest) {
   }
 
   // 認証成功時はトップ画面にリダイレクト
-  return NextResponse.redirect(new URL('/', request.url))
+  return NextResponse.redirect(new URL('/', appUrl))
 }

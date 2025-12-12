@@ -42,10 +42,14 @@ export default function LoginPage() {
     try {
       setIsLoading(true)
 
+      // リダイレクトURLを取得（環境変数が設定されていない場合は現在のオリジンを使用）
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      const redirectTo = `${appUrl}/auth/callback`
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+          redirectTo,
         },
       })
 
