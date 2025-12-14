@@ -20,6 +20,7 @@ import { Header } from './header'
 import { InboxColumn } from './inbox-column'
 import { BacklogColumn } from './backlog-column'
 import { getInboxItems } from '../actions/inbox'
+import { getBacklogItems } from '../actions/backlog'
 import { getCurrentUser } from '@/lib/auth'
 import dayjs from 'dayjs'
 
@@ -41,13 +42,16 @@ export async function Dashboard() {
   // 本日のInboxアイテムを取得（認証済みユーザーのIDはServer Action内で取得される）
   const initialInboxItems = await getInboxItems(today)
 
+  // Backlogアイテムを取得（認証済みユーザーのIDはServer Action内で取得される）
+  const initialBacklogItems = await getBacklogItems()
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header email={user.email} name={user.name} />
       <main className="flex-1 px-4 pb-8 pt-4 md:px-6">
         <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2">
           <InboxColumn initialItems={initialInboxItems} />
-          <BacklogColumn />
+          <BacklogColumn initialItems={initialBacklogItems} />
         </div>
       </main>
     </div>

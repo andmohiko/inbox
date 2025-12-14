@@ -63,6 +63,11 @@ export interface BacklogItem {
   title: string
 
   /**
+   * ステータス
+   */
+  status: InboxItemStatus
+
+  /**
    * 表示順序
    */
   order: number
