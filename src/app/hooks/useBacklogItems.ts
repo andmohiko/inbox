@@ -20,6 +20,7 @@ import {
   getBacklogItems,
   addBacklogItem as addBacklogItemAction,
   updateBacklogItem as updateBacklogItemAction,
+  moveBacklogToInbox as moveBacklogToInboxAction,
 } from '../actions/backlog'
 
 interface UseBacklogItemsProps {
@@ -27,6 +28,11 @@ interface UseBacklogItemsProps {
    * 初期データ（Server Componentから渡されたBacklogアイテム）
    */
   initialItems: BacklogItem[]
+  /**
+   * Inboxの再フェッチ関数（オプション）
+   * アイテムをInboxに移動した際に呼び出される
+   */
+  onInboxRefresh?: () => Promise<void>
 }
 
 interface UseBacklogItemsReturn {
@@ -60,6 +66,10 @@ interface UseBacklogItemsReturn {
    * Backlogアイテムのステータスを循環させる
    */
   cycleStatus: (item: BacklogItem) => void
+  /**
+   * Backlogのデータを再取得
+   */
+  refreshBacklog: () => Promise<void>
 }
 
 /**
@@ -70,6 +80,7 @@ interface UseBacklogItemsReturn {
  */
 export function useBacklogItems({
   initialItems,
+  onInboxRefresh,
 }: UseBacklogItemsProps): UseBacklogItemsReturn {
   // Backlogアイテムの状態管理（初期値はServer Componentから受け取ったデータ）
   const [backlogItems, setBacklogItems] = useState<BacklogItem[]>(initialItems)
@@ -138,13 +149,27 @@ export function useBacklogItems({
   }
 
   /**
-   * BacklogアイテムをInboxへ移動（TODO: 実装予定）
+   * BacklogアイテムをInboxへ移動
    *
    * @param id - 移動するアイテムのID
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const moveToInbox = (id: string) => {
-    // TODO: 実装予定
+  const moveToInbox = async (id: string) => {
+    try {
+      // Server Actionを呼び出してアイテムをInboxに移動（期日は本日に設定）
+      await moveBacklogToInboxAction(id)
+
+      // 移動後はBacklogのデータを再取得（移動したアイテムはBacklogから消える）
+      const items = await getBacklogItems()
+      setBacklogItems(items)
+
+      // Inboxのデータも再取得
+      if (onInboxRefresh) {
+        await onInboxRefresh()
+      }
+    } catch (error) {
+      console.error('BacklogからInboxへの移動に失敗しました:', error)
+      // TODO: エラーメッセージをユーザーに表示する処理を追加
+    }
   }
 
   /**
@@ -164,6 +189,18 @@ export function useBacklogItems({
     updateBacklogItem(item.id, { status: nextStatus })
   }
 
+  /**
+   * Backlogのデータを再取得
+   */
+  const refreshBacklog = async () => {
+    try {
+      const items = await getBacklogItems()
+      setBacklogItems(items)
+    } catch (error) {
+      console.error('Backlogアイテムの取得に失敗しました:', error)
+    }
+  }
+
   return {
     backlogItems,
     addBacklogItem,
@@ -172,5 +209,6 @@ export function useBacklogItems({
     reorderBacklogItems,
     moveToInbox,
     cycleStatus,
+    refreshBacklog,
   }
 }

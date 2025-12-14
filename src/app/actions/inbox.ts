@@ -20,7 +20,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import type { InboxItem } from '@/types/item'
+import type { InboxItem, BacklogItem } from '@/types/item'
 import { mapItemStatusToUI, mapUIToItemStatus } from '@/types/item'
 import { getCurrentUser } from '@/lib/auth'
 import type { Prisma } from '@prisma/client'
@@ -323,6 +323,92 @@ export async function updateInboxItem(
     // エラーを再スロー
     throw new Error(
       `Inboxアイテムの更新に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+}
+
+/**
+ * InboxアイテムをBacklog（やりたいことリスト）へ移動
+ *
+ * 主な仕様:
+ * - 期日をnullに設定（Backlogアイテムになる）
+ * - orderをBacklogの最大値+1に設定（スタック構造で上に追加）
+ * - ステータスは保持される
+ *
+ * @param id - 移動するアイテムのID
+ * @returns 移動後のBacklogItem
+ * @throws 認証エラーまたはデータベースエラーが発生した場合
+ */
+export async function moveInboxToBacklog(id: string): Promise<BacklogItem> {
+  try {
+    // 認証状態を確認し、認証済みユーザーのIDを取得
+    const user = await getCurrentUser()
+    if (!user) {
+      throw new Error('認証が必要です')
+    }
+    const userId = user.id
+
+    // アイテムが存在し、かつユーザーが所有していることを確認
+    const existingItem = await prisma.item.findFirst({
+      where: {
+        id,
+        userId,
+        deletedAt: null,
+        dueDate: { not: null }, // Inboxアイテムのみ（期日が設定されている）
+      },
+    })
+
+    if (!existingItem) {
+      throw new Error('アイテムが見つかりません')
+    }
+
+    // Backlogアイテムの最大orderを取得
+    const existingBacklogItems = await prisma.item.findMany({
+      where: {
+        userId,
+        dueDate: null, // Backlogアイテムのみ
+        deletedAt: null,
+      },
+      orderBy: {
+        order: 'desc', // 降順でソートして最大値を取得
+      },
+      take: 1, // 最大値のみ取得
+    })
+
+    // 新しいorderを計算（既存の最大値+1、存在しない場合は0）
+    const newOrder =
+      existingBacklogItems.length > 0 ? existingBacklogItems[0].order + 1 : 0
+
+    // アイテムを更新（期日をnullに設定、orderを更新）
+    const updatedItem = await prisma.item.update({
+      where: {
+        id,
+      },
+      data: {
+        dueDate: null, // 期日を削除してBacklogに移動
+        order: newOrder, // Backlogの最大値+1に設定
+      },
+    })
+
+    // 更新したアイテムをBacklogItem形式に変換
+    return {
+      id: updatedItem.id,
+      title: updatedItem.title,
+      status: mapItemStatusToUI(updatedItem.status),
+      order: updatedItem.order,
+    }
+  } catch (error) {
+    // エラーログを出力
+    console.error('moveInboxToBacklog エラー:', {
+      functionName: 'moveInboxToBacklog',
+      id,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+
+    // エラーを再スロー
+    throw new Error(
+      `InboxからBacklogへの移動に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
     )
   }
 }

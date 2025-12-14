@@ -20,6 +20,7 @@ import {
   getInboxItems,
   addInboxItem as addInboxItemAction,
   updateInboxItem as updateInboxItemAction,
+  moveInboxToBacklog as moveInboxToBacklogAction,
 } from '../actions/inbox'
 import dayjs from 'dayjs'
 
@@ -32,6 +33,11 @@ interface UseInboxItemsProps {
    * 初期日付（YYYY-MM-DD形式の文字列）
    */
   initialDate: string
+  /**
+   * Backlogの再フェッチ関数（オプション）
+   * アイテムをBacklogに移動した際に呼び出される
+   */
+  onBacklogRefresh?: () => Promise<void>
 }
 
 interface UseInboxItemsReturn {
@@ -75,6 +81,10 @@ interface UseInboxItemsReturn {
    * Inboxアイテムのステータスを循環させる
    */
   cycleStatus: (item: InboxItem) => void
+  /**
+   * Inboxのデータを再取得（現在の日付）
+   */
+  refreshInbox: () => Promise<void>
 }
 
 /**
@@ -86,6 +96,7 @@ interface UseInboxItemsReturn {
 export function useInboxItems({
   initialItems,
   initialDate,
+  onBacklogRefresh,
 }: UseInboxItemsProps): UseInboxItemsReturn {
   // 現在の日付をYYYY-MM-DD形式の文字列で管理
   const [currentDate, setCurrentDate] = useState<string>(initialDate)
@@ -178,13 +189,26 @@ export function useInboxItems({
   }
 
   /**
-   * Inboxアイテムをやりたいことリストへ移動（TODO: 実装予定）
+   * Inboxアイテムをやりたいことリストへ移動
    *
    * @param id - 移動するアイテムのID
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const moveToWantToDo = (id: string) => {
-    // TODO: 実装予定
+  const moveToWantToDo = async (id: string) => {
+    try {
+      // Server Actionを呼び出してアイテムをBacklogに移動
+      await moveInboxToBacklogAction(id)
+
+      // 移動後は現在の日付のデータを再取得（移動したアイテムはInboxから消える）
+      await changeDateAndFetch(currentDate)
+
+      // Backlogのデータも再取得
+      if (onBacklogRefresh) {
+        await onBacklogRefresh()
+      }
+    } catch (error) {
+      console.error('InboxからBacklogへの移動に失敗しました:', error)
+      // TODO: エラーメッセージをユーザーに表示する処理を追加
+    }
   }
 
   /**
@@ -210,6 +234,13 @@ export function useInboxItems({
     [inboxItems],
   )
 
+  /**
+   * Inboxのデータを再取得（現在の日付）
+   */
+  const refreshInbox = async () => {
+    await changeDateAndFetch(currentDate)
+  }
+
   return {
     currentDate,
     currentItems,
@@ -220,5 +251,6 @@ export function useInboxItems({
     reorderInboxItems,
     moveToWantToDo,
     cycleStatus,
+    refreshInbox,
   }
 }

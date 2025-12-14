@@ -36,6 +36,7 @@ import type { InboxItem } from '@/types/item'
 import { useInboxItems } from '../hooks/useInboxItems'
 import { useDateNavigation } from '../hooks/useDateNavigation'
 import dayjs from 'dayjs'
+import { useEffect } from 'react'
 
 const statusConfig = {
   not_started: {
@@ -52,9 +53,21 @@ interface InboxColumnProps {
    * 初期データ（本日のInboxアイテム）
    */
   initialItems: InboxItem[]
+  /**
+   * Backlogの再フェッチ関数（オプション）
+   */
+  onBacklogRefresh?: () => Promise<void>
+  /**
+   * Inboxの再フェッチ関数を設定するコールバック
+   */
+  onInboxRefreshRef?: (refreshFn: () => Promise<void>) => void
 }
 
-export function InboxColumn({ initialItems }: InboxColumnProps) {
+export function InboxColumn({
+  initialItems,
+  onBacklogRefresh,
+  onInboxRefreshRef,
+}: InboxColumnProps) {
   // 初期日付は常に今日の日付を使用
   // （initialItemsには今日のタスクと今日より前の未完了タスクが含まれるため）
   const initialDate = dayjs().format('YYYY-MM-DD')
@@ -69,10 +82,19 @@ export function InboxColumn({ initialItems }: InboxColumnProps) {
     reorderInboxItems,
     moveToWantToDo,
     cycleStatus,
+    refreshInbox,
   } = useInboxItems({
     initialItems,
     initialDate,
+    onBacklogRefresh,
   })
+
+  // Inboxの再フェッチ関数を親コンポーネントに渡す
+  useEffect(() => {
+    if (onInboxRefreshRef) {
+      onInboxRefreshRef(refreshInbox)
+    }
+  }, [onInboxRefreshRef, refreshInbox])
 
   // 日付ナビゲーションのカスタムフック
   const { formatDisplayDate, navigateDate, goToToday } = useDateNavigation({

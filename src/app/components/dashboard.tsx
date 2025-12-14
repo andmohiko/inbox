@@ -16,9 +16,7 @@
  */
 
 import { redirect } from 'next/navigation'
-import { Header } from './header'
-import { InboxColumn } from './inbox-column'
-import { BacklogColumn } from './backlog-column'
+import { DashboardClient } from './dashboard-client'
 import { getInboxItems } from '../actions/inbox'
 import { getBacklogItems } from '../actions/backlog'
 import { getCurrentUser } from '@/lib/auth'
@@ -26,6 +24,8 @@ import dayjs from 'dayjs'
 
 /**
  * Dashboardコンポーネント
+ *
+ * Server Componentとして実装し、初期データを取得してClient Componentに渡す
  */
 export async function Dashboard() {
   // 認証状態を確認
@@ -46,14 +46,10 @@ export async function Dashboard() {
   const initialBacklogItems = await getBacklogItems()
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Header email={user.email} name={user.name} />
-      <main className="flex-1 px-4 pb-8 pt-4 md:px-6">
-        <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2">
-          <InboxColumn initialItems={initialInboxItems} />
-          <BacklogColumn initialItems={initialBacklogItems} />
-        </div>
-      </main>
-    </div>
+    <DashboardClient
+      initialInboxItems={initialInboxItems}
+      initialBacklogItems={initialBacklogItems}
+      user={{ email: user.email, name: user.name }}
+    />
   )
 }

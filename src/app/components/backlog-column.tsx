@@ -32,6 +32,7 @@ import {
 import { SortableItem } from './sortable-item'
 import type { BacklogItem } from '@/types/item'
 import { useBacklogItems } from '../hooks/useBacklogItems'
+import { useEffect } from 'react'
 
 const statusConfig = {
   not_started: {
@@ -48,9 +49,21 @@ interface BacklogColumnProps {
    * 初期データ（Backlogアイテム）
    */
   initialItems: BacklogItem[]
+  /**
+   * Inboxの再フェッチ関数（オプション）
+   */
+  onInboxRefresh?: () => Promise<void>
+  /**
+   * Backlogの再フェッチ関数を設定するコールバック
+   */
+  onBacklogRefreshRef?: (refreshFn: () => Promise<void>) => void
 }
 
-export function BacklogColumn({ initialItems }: BacklogColumnProps) {
+export function BacklogColumn({
+  initialItems,
+  onInboxRefresh,
+  onBacklogRefreshRef,
+}: BacklogColumnProps) {
   // Backlogアイテム管理のカスタムフック
   const {
     backlogItems,
@@ -59,9 +72,18 @@ export function BacklogColumn({ initialItems }: BacklogColumnProps) {
     reorderBacklogItems,
     moveToInbox,
     cycleStatus,
+    refreshBacklog,
   } = useBacklogItems({
     initialItems,
+    onInboxRefresh,
   })
+
+  // Backlogの再フェッチ関数を親コンポーネントに渡す
+  useEffect(() => {
+    if (onBacklogRefreshRef) {
+      onBacklogRefreshRef(refreshBacklog)
+    }
+  }, [onBacklogRefreshRef, refreshBacklog])
 
   // 新しいアイテムのタイトル入力
   const [newItemTitle, setNewItemTitle] = useState('')
