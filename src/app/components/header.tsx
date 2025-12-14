@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { LogOut, User } from 'lucide-react'
 import { signOut } from '../actions/auth'
+import { ThemeSwitcher } from '@/components/theme-switcher'
 
 /**
  * HeaderコンポーネントのProps
@@ -70,23 +71,26 @@ export function Header({ email, name }: HeaderProps) {
           <h1 className="text-xl font-bold">Inbox</h1>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">{displayName}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={handleLogout}
-              className="text-destructive"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              ログアウト
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <ThemeSwitcher />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">{displayName}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="text-destructive"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                ログアウト
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   )
