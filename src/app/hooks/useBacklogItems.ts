@@ -65,11 +65,15 @@ interface UseBacklogItemsReturn {
   /**
    * Backlogアイテムのステータスを循環させる
    */
-  cycleStatus: (item: BacklogItem) => void
+  cycleStatus: (item: BacklogItem) => Promise<void>
   /**
    * Backlogのデータを再取得
    */
   refreshBacklog: () => Promise<void>
+  /**
+   * ローディング中のアイテムIDのセット
+   */
+  loadingItemIds: Set<string>
 }
 
 /**
@@ -84,6 +88,8 @@ export function useBacklogItems({
 }: UseBacklogItemsProps): UseBacklogItemsReturn {
   // Backlogアイテムの状態管理（初期値はServer Componentから受け取ったデータ）
   const [backlogItems, setBacklogItems] = useState<BacklogItem[]>(initialItems)
+  // ローディング中のアイテムIDを管理
+  const [loadingItemIds, setLoadingItemIds] = useState<Set<string>>(new Set())
 
   /**
    * 新しいBacklogアイテムを追加
@@ -175,10 +181,11 @@ export function useBacklogItems({
   /**
    * Backlogアイテムのステータスを循環させる
    * 未着手 → 進行中 → 完了 → 未着手 の順で循環
+   * オプティミスティックUI更新を実装し、即座に画面に反映
    *
    * @param item - ステータスを変更するアイテム
    */
-  const cycleStatus = (item: BacklogItem) => {
+  const cycleStatus = async (item: BacklogItem): Promise<void> => {
     const statusOrder: BacklogItem['status'][] = [
       'not_started',
       'in_progress',
@@ -186,7 +193,45 @@ export function useBacklogItems({
     ]
     const currentIndex = statusOrder.indexOf(item.status)
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length]
-    updateBacklogItem(item.id, { status: nextStatus })
+
+    // 現在の状態を保存（エラー時にロールバックするため）
+    const previousItem = item
+
+    // ローディング状態を開始
+    setLoadingItemIds((prev) => new Set(prev).add(item.id))
+
+    // オプティミスティックUI更新：即座にローカル状態を更新
+    setBacklogItems((prevItems) =>
+      prevItems.map((i) =>
+        i.id === item.id ? { ...i, status: nextStatus } : i,
+      ),
+    )
+
+    try {
+      // Server Actionを呼び出してアイテムを更新
+      const updatedItem = await updateBacklogItemAction(item.id, {
+        status: nextStatus,
+      })
+
+      // サーバーから返された最新の状態で更新
+      setBacklogItems((prevItems) =>
+        prevItems.map((i) => (i.id === item.id ? updatedItem : i)),
+      )
+    } catch (error) {
+      // エラーが発生した場合は、元の状態にロールバック
+      console.error('Backlogアイテムのステータス更新に失敗しました:', error)
+      setBacklogItems((prevItems) =>
+        prevItems.map((i) => (i.id === item.id ? previousItem : i)),
+      )
+      // TODO: エラーメッセージをユーザーに表示する処理を追加
+    } finally {
+      // ローディング状態を解除
+      setLoadingItemIds((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(item.id)
+        return newSet
+      })
+    }
   }
 
   /**
@@ -210,5 +255,6 @@ export function useBacklogItems({
     moveToInbox,
     cycleStatus,
     refreshBacklog,
+    loadingItemIds,
   }
 }

@@ -30,6 +30,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from 'lucide-react'
 import { SortableItem } from './sortable-item'
 import type { InboxItem } from '@/types/item'
@@ -83,6 +84,7 @@ export function InboxColumn({
     moveToWantToDo,
     cycleStatus,
     refreshInbox,
+    loadingItemIds,
   } = useInboxItems({
     initialItems,
     initialDate,
@@ -209,6 +211,7 @@ export function InboxColumn({
               >
                 {currentItems.map((item) => {
                   const StatusIcon = statusConfig[item.status].icon
+                  const isLoading = loadingItemIds.has(item.id)
                   return (
                     <SortableItem key={item.id} id={item.id}>
                       <div
@@ -218,10 +221,15 @@ export function InboxColumn({
                       >
                         <button
                           onClick={() => cycleStatus(item)}
-                          className={`flex-shrink-0 ${statusConfig[item.status].className}`}
+                          disabled={isLoading}
+                          className={`flex-shrink-0 ${statusConfig[item.status].className} ${isLoading ? 'opacity-50' : ''}`}
                           title={statusConfig[item.status].label}
                         >
-                          <StatusIcon className="h-5 w-5" />
+                          {isLoading ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <StatusIcon className="h-5 w-5" />
+                          )}
                         </button>
                         <span
                           className={`flex-1 text-sm ${item.status === 'completed' ? 'line-through' : ''}`}

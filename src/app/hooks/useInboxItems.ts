@@ -80,11 +80,15 @@ interface UseInboxItemsReturn {
   /**
    * Inboxアイテムのステータスを循環させる
    */
-  cycleStatus: (item: InboxItem) => void
+  cycleStatus: (item: InboxItem) => Promise<void>
   /**
    * Inboxのデータを再取得（現在の日付）
    */
   refreshInbox: () => Promise<void>
+  /**
+   * ローディング中のアイテムIDのセット
+   */
+  loadingItemIds: Set<string>
 }
 
 /**
@@ -103,6 +107,8 @@ export function useInboxItems({
 
   // Inboxアイテムの状態管理（初期値はServer Componentから受け取ったデータ）
   const [inboxItems, setInboxItems] = useState<InboxItem[]>(initialItems)
+  // ローディング中のアイテムIDを管理
+  const [loadingItemIds, setLoadingItemIds] = useState<Set<string>>(new Set())
 
   /**
    * 指定日付に移動し、該当日付のデータを取得
@@ -214,10 +220,11 @@ export function useInboxItems({
   /**
    * Inboxアイテムのステータスを循環させる
    * 未着手 → 進行中 → 完了 → 未着手 の順で循環
+   * オプティミスティックUI更新を実装し、即座に画面に反映
    *
    * @param item - ステータスを変更するアイテム
    */
-  const cycleStatus = (item: InboxItem) => {
+  const cycleStatus = async (item: InboxItem): Promise<void> => {
     const statusOrder: InboxItem['status'][] = [
       'not_started',
       'in_progress',
@@ -225,7 +232,52 @@ export function useInboxItems({
     ]
     const currentIndex = statusOrder.indexOf(item.status)
     const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length]
-    updateInboxItem(item.id, { status: nextStatus })
+
+    // 現在の状態を保存（エラー時にロールバックするため）
+    const previousItem = item
+
+    // ローディング状態を開始
+    setLoadingItemIds((prev) => new Set(prev).add(item.id))
+
+    // オプティミスティックUI更新：即座にローカル状態を更新
+    setInboxItems((prevItems) =>
+      prevItems.map((i) =>
+        i.id === item.id ? { ...i, status: nextStatus } : i,
+      ),
+    )
+
+    try {
+      // Server Actionを呼び出してアイテムを更新
+      const updatedItem = await updateInboxItemAction(item.id, {
+        status: nextStatus,
+      })
+
+      // 更新後のアイテムが現在表示中の日付のものか確認
+      const currentItem = inboxItems.find((i) => i.id === item.id)
+      if (currentItem && updatedItem.date === currentItem.date) {
+        // 同じ日付のアイテムなので、サーバーから返された最新の状態で更新
+        setInboxItems((prevItems) =>
+          prevItems.map((i) => (i.id === item.id ? updatedItem : i)),
+        )
+      } else {
+        // 別の日付のアイテムになった、または日付が変わった場合はデータを再取得
+        await changeDateAndFetch(currentDate)
+      }
+    } catch (error) {
+      // エラーが発生した場合は、元の状態にロールバック
+      console.error('Inboxアイテムのステータス更新に失敗しました:', error)
+      setInboxItems((prevItems) =>
+        prevItems.map((i) => (i.id === item.id ? previousItem : i)),
+      )
+      // TODO: エラーメッセージをユーザーに表示する処理を追加
+    } finally {
+      // ローディング状態を解除
+      setLoadingItemIds((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(item.id)
+        return newSet
+      })
+    }
   }
 
   // ソート済みのアイテムリスト（メモ化してパフォーマンス最適化）
@@ -252,5 +304,6 @@ export function useInboxItems({
     moveToWantToDo,
     cycleStatus,
     refreshInbox,
+    loadingItemIds,
   }
 }
