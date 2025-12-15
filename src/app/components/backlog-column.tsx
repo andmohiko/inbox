@@ -2,7 +2,6 @@
 
 import type React from 'react'
 
-import { useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -20,10 +19,10 @@ import {
 } from '@dnd-kit/sortable'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Plus, Trash2, ArrowLeft } from 'lucide-react'
+import { Trash2, ArrowLeft } from 'lucide-react'
 import { SortableItem } from './sortable-item'
 import { StatusButton } from './status-button'
+import { ItemCreationForm } from './item-creation-form'
 import type { BacklogItem } from '@/types/item'
 import { useBacklogItems } from '../hooks/useBacklogItems'
 import { useEffect } from 'react'
@@ -70,9 +69,6 @@ export function BacklogColumn({
     }
   }, [onBacklogRefreshRef, refreshBacklog])
 
-  // 新しいアイテムのタイトル入力
-  const [newItemTitle, setNewItemTitle] = useState('')
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -102,14 +98,6 @@ export function BacklogColumn({
     }
   }
 
-  const handleAddItem = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newItemTitle.trim()) {
-      await addBacklogItem(newItemTitle.trim())
-      setNewItemTitle('')
-    }
-  }
-
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
@@ -121,17 +109,10 @@ export function BacklogColumn({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3">
-        <form onSubmit={handleAddItem} className="flex gap-2">
-          <Input
-            placeholder="やりたいことを追加..."
-            value={newItemTitle}
-            onChange={(e) => setNewItemTitle(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" size="icon" disabled={!newItemTitle.trim()}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </form>
+        <ItemCreationForm
+          placeholder="やりたいことを追加..."
+          onCreateItem={addBacklogItem}
+        />
 
         <div className="flex flex-1 flex-col gap-2">
           {backlogItems.length === 0 ? (

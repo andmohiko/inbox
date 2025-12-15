@@ -2,7 +2,6 @@
 
 import type React from 'react'
 
-import { useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -20,16 +19,10 @@ import {
 } from '@dnd-kit/sortable'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Plus,
-  Trash2,
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react'
+import { Trash2, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { SortableItem } from './sortable-item'
 import { StatusButton } from './status-button'
+import { ItemCreationForm } from './item-creation-form'
 import type { InboxItem } from '@/types/item'
 import { useInboxItems } from '../hooks/useInboxItems'
 import { useDateNavigation } from '../hooks/useDateNavigation'
@@ -91,9 +84,6 @@ export function InboxColumn({
     onDateChange: changeDateAndFetch,
   })
 
-  // 新しいアイテムのタイトル入力
-  const [newItemTitle, setNewItemTitle] = useState('')
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -120,14 +110,6 @@ export function InboxColumn({
       )
 
       reorderInboxItems(reordered)
-    }
-  }
-
-  const handleAddItem = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newItemTitle.trim()) {
-      await addInboxItem(newItemTitle.trim())
-      setNewItemTitle('')
     }
   }
 
@@ -169,17 +151,10 @@ export function InboxColumn({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3">
-        <form onSubmit={handleAddItem} className="flex gap-2">
-          <Input
-            placeholder="新しいタスクを追加..."
-            value={newItemTitle}
-            onChange={(e) => setNewItemTitle(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" size="icon" disabled={!newItemTitle.trim()}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </form>
+        <ItemCreationForm
+          placeholder="新しいタスクを追加..."
+          onCreateItem={addInboxItem}
+        />
 
         <div className="flex flex-1 flex-col gap-2">
           {currentItems.length === 0 ? (
