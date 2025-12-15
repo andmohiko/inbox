@@ -353,3 +353,62 @@ export async function moveBacklogToInbox(
     )
   }
 }
+
+/**
+ * Backlogアイテム（やりたいこと）を削除（ソフトデリート）
+ *
+ * 主な仕様:
+ * - deletedAtフィールドに現在の日時を設定
+ * - 物理削除ではなく論理削除（ソフトデリート）
+ * - 削除後はリストに表示されなくなる
+ *
+ * @param id - 削除するアイテムのID
+ * @throws 認証エラーまたはデータベースエラーが発生した場合
+ */
+export async function deleteBacklogItem(id: string): Promise<void> {
+  try {
+    // 認証状態を確認し、認証済みユーザーのIDを取得
+    const user = await getCurrentUser()
+    if (!user) {
+      throw new Error('認証が必要です')
+    }
+    const userId = user.id
+
+    // アイテムが存在し、かつユーザーが所有していることを確認
+    const existingItem = await prisma.item.findFirst({
+      where: {
+        id,
+        userId,
+        deletedAt: null, // 既に削除されていないアイテムのみ
+        dueDate: null, // Backlogアイテムのみ
+      },
+    })
+
+    if (!existingItem) {
+      throw new Error('アイテムが見つかりません')
+    }
+
+    // アイテムをソフトデリート（deletedAtを設定）
+    await prisma.item.update({
+      where: {
+        id,
+      },
+      data: {
+        deletedAt: new Date(), // 削除日時を設定
+      },
+    })
+  } catch (error) {
+    // エラーログを出力
+    console.error('deleteBacklogItem エラー:', {
+      functionName: 'deleteBacklogItem',
+      id,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+
+    // エラーを再スロー
+    throw new Error(
+      `Backlogアイテムの削除に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+}

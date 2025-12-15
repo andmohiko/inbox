@@ -21,6 +21,7 @@ import {
   addInboxItem as addInboxItemAction,
   updateInboxItem as updateInboxItemAction,
   moveInboxToBacklog as moveInboxToBacklogAction,
+  deleteInboxItem as deleteInboxItemAction,
 } from '../actions/inbox'
 import dayjs from 'dayjs'
 import { getNextStatus } from '../utils/status'
@@ -176,13 +177,27 @@ export function useInboxItems({
   }
 
   /**
-   * Inboxアイテムを削除（TODO: 実装予定）
+   * Inboxアイテムを削除（ソフトデリート）
    *
    * @param id - 削除するアイテムのID
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const deleteInboxItem = (id: string) => {
-    // TODO: 実装予定
+  const deleteInboxItem = async (id: string) => {
+    try {
+      // 削除確認ダイアログを表示
+      const confirmed = window.confirm('このタスクを削除しますか？')
+      if (!confirmed) {
+        return
+      }
+
+      // Server Actionを呼び出してアイテムを削除
+      await deleteInboxItemAction(id)
+
+      // 削除後は現在の日付のデータを再取得（削除したアイテムはリストから消える）
+      await changeDateAndFetch(currentDate)
+    } catch (error) {
+      console.error('Inboxアイテムの削除に失敗しました:', error)
+      // TODO: エラーメッセージをユーザーに表示する処理を追加
+    }
   }
 
   /**

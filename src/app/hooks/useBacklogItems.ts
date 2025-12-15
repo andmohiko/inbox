@@ -21,6 +21,7 @@ import {
   addBacklogItem as addBacklogItemAction,
   updateBacklogItem as updateBacklogItemAction,
   moveBacklogToInbox as moveBacklogToInboxAction,
+  deleteBacklogItem as deleteBacklogItemAction,
 } from '../actions/backlog'
 import { getNextStatus } from '../utils/status'
 
@@ -112,13 +113,28 @@ export function useBacklogItems({
   }
 
   /**
-   * Backlogアイテムを削除（TODO: 実装予定）
+   * Backlogアイテムを削除（ソフトデリート）
    *
    * @param id - 削除するアイテムのID
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const deleteBacklogItem = (id: string) => {
-    // TODO: 実装予定
+  const deleteBacklogItem = async (id: string) => {
+    try {
+      // 削除確認ダイアログを表示
+      const confirmed = window.confirm('このアイテムを削除しますか？')
+      if (!confirmed) {
+        return
+      }
+
+      // Server Actionを呼び出してアイテムを削除
+      await deleteBacklogItemAction(id)
+
+      // 削除後はBacklogのデータを再取得（削除したアイテムはリストから消える）
+      const items = await getBacklogItems()
+      setBacklogItems(items)
+    } catch (error) {
+      console.error('Backlogアイテムの削除に失敗しました:', error)
+      // TODO: エラーメッセージをユーザーに表示する処理を追加
+    }
   }
 
   /**
