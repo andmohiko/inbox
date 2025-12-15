@@ -21,29 +21,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Plus,
-  Trash2,
-  ArrowLeft,
-  Circle,
-  Clock,
-  CheckCircle2,
-  Loader2,
-} from 'lucide-react'
+import { Plus, Trash2, ArrowLeft } from 'lucide-react'
 import { SortableItem } from './sortable-item'
+import { StatusButton } from './status-button'
 import type { BacklogItem } from '@/types/item'
 import { useBacklogItems } from '../hooks/useBacklogItems'
 import { useEffect } from 'react'
-
-const statusConfig = {
-  not_started: {
-    label: '未着手',
-    icon: Circle,
-    className: 'text-muted-foreground',
-  },
-  in_progress: { label: '進行中', icon: Clock, className: 'text-blue-500' },
-  completed: { label: '完了', icon: CheckCircle2, className: 'text-green-500' },
-}
 
 interface BacklogColumnProps {
   /**
@@ -166,7 +149,6 @@ export function BacklogColumn({
                 strategy={verticalListSortingStrategy}
               >
                 {backlogItems.map((item) => {
-                  const StatusIcon = statusConfig[item.status].icon
                   const isLoading = loadingItemIds.has(item.id)
                   return (
                     <SortableItem key={item.id} id={item.id}>
@@ -175,18 +157,11 @@ export function BacklogColumn({
                           item.status === 'completed' ? 'opacity-60' : ''
                         }`}
                       >
-                        <button
+                        <StatusButton
+                          status={item.status}
+                          isLoading={isLoading}
                           onClick={() => cycleStatus(item)}
-                          disabled={isLoading}
-                          className={`flex-shrink-0 ${statusConfig[item.status].className} ${isLoading ? 'opacity-50' : ''}`}
-                          title={statusConfig[item.status].label}
-                        >
-                          {isLoading ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <StatusIcon className="h-5 w-5" />
-                          )}
-                        </button>
+                        />
                         <span
                           className={`flex-1 text-sm ${item.status === 'completed' ? 'line-through' : ''}`}
                         >

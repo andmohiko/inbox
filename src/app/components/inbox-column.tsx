@@ -25,29 +25,16 @@ import {
   Plus,
   Trash2,
   ArrowRight,
-  Circle,
-  Clock,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Loader2,
 } from 'lucide-react'
 import { SortableItem } from './sortable-item'
+import { StatusButton } from './status-button'
 import type { InboxItem } from '@/types/item'
 import { useInboxItems } from '../hooks/useInboxItems'
 import { useDateNavigation } from '../hooks/useDateNavigation'
 import dayjs from 'dayjs'
 import { useEffect } from 'react'
-
-const statusConfig = {
-  not_started: {
-    label: '未着手',
-    icon: Circle,
-    className: 'text-muted-foreground',
-  },
-  in_progress: { label: '進行中', icon: Clock, className: 'text-blue-500' },
-  completed: { label: '完了', icon: CheckCircle2, className: 'text-green-500' },
-}
 
 interface InboxColumnProps {
   /**
@@ -210,7 +197,6 @@ export function InboxColumn({
                 strategy={verticalListSortingStrategy}
               >
                 {currentItems.map((item) => {
-                  const StatusIcon = statusConfig[item.status].icon
                   const isLoading = loadingItemIds.has(item.id)
                   return (
                     <SortableItem key={item.id} id={item.id}>
@@ -219,18 +205,11 @@ export function InboxColumn({
                           item.status === 'completed' ? 'opacity-60' : ''
                         }`}
                       >
-                        <button
+                        <StatusButton
+                          status={item.status}
+                          isLoading={isLoading}
                           onClick={() => cycleStatus(item)}
-                          disabled={isLoading}
-                          className={`flex-shrink-0 ${statusConfig[item.status].className} ${isLoading ? 'opacity-50' : ''}`}
-                          title={statusConfig[item.status].label}
-                        >
-                          {isLoading ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <StatusIcon className="h-5 w-5" />
-                          )}
-                        </button>
+                        />
                         <span
                           className={`flex-1 text-sm ${item.status === 'completed' ? 'line-through' : ''}`}
                         >

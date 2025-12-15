@@ -23,6 +23,7 @@ import {
   moveInboxToBacklog as moveInboxToBacklogAction,
 } from '../actions/inbox'
 import dayjs from 'dayjs'
+import { getNextStatus } from '../utils/status'
 
 interface UseInboxItemsProps {
   /**
@@ -225,13 +226,7 @@ export function useInboxItems({
    * @param item - ステータスを変更するアイテム
    */
   const cycleStatus = async (item: InboxItem): Promise<void> => {
-    const statusOrder: InboxItem['status'][] = [
-      'not_started',
-      'in_progress',
-      'completed',
-    ]
-    const currentIndex = statusOrder.indexOf(item.status)
-    const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length]
+    const nextStatus = getNextStatus(item.status)
 
     // 現在の状態を保存（エラー時にロールバックするため）
     const previousItem = item

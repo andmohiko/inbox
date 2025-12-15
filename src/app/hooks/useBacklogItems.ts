@@ -22,6 +22,7 @@ import {
   updateBacklogItem as updateBacklogItemAction,
   moveBacklogToInbox as moveBacklogToInboxAction,
 } from '../actions/backlog'
+import { getNextStatus } from '../utils/status'
 
 interface UseBacklogItemsProps {
   /**
@@ -186,13 +187,7 @@ export function useBacklogItems({
    * @param item - ステータスを変更するアイテム
    */
   const cycleStatus = async (item: BacklogItem): Promise<void> => {
-    const statusOrder: BacklogItem['status'][] = [
-      'not_started',
-      'in_progress',
-      'completed',
-    ]
-    const currentIndex = statusOrder.indexOf(item.status)
-    const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length]
+    const nextStatus = getNextStatus(item.status)
 
     // 現在の状態を保存（エラー時にロールバックするため）
     const previousItem = item
