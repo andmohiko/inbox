@@ -57,7 +57,7 @@ export async function getInboxItems(date: Date | string): Promise<InboxItem[]> {
     // 条件：
     // 1. 期日が表示日のタスクはすべて取得（完了/未完了問わず）
     // 2. 未完了のタスクで、期日が表示日より前のものはすべて取得
-    // 3. 完了日が表示日のタスクはすべて取得（期日に関係なく、表示日分として表示）
+    // 3. 完了日が表示日のタスクのうち、Inboxアイテム（dueDateが設定されている）のみ取得
     const items = await prisma.item.findMany({
       where: {
         userId,
@@ -79,11 +79,14 @@ export async function getInboxItems(date: Date | string): Promise<InboxItem[]> {
               not: 'DONE', // 未完了（DONE以外）
             },
           },
-          // 完了日が表示日のタスク（すべて取得、期日に関係なく）
+          // 完了日が表示日のタスクのうち、Inboxアイテム（dueDateが設定されている）のみ取得
           {
             completedAt: {
               gte: displayDateStart,
               lte: displayDateEnd,
+            },
+            dueDate: {
+              not: null, // dueDateが設定されている（Inboxアイテム）のみ
             },
           },
         ],

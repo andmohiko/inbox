@@ -71,6 +71,11 @@ export interface BacklogItem {
    * 表示順序
    */
   order: number
+
+  /**
+   * 完了日時（デバッグ用）
+   */
+  completedAt?: Date | null
 }
 
 /**

@@ -199,6 +199,8 @@ export function useBacklogItems({
    * Backlogアイテムのステータスを循環させる
    * 未着手 → 進行中 → 完了 → 未着手 の順で循環
    * オプティミスティックUI更新を実装し、即座に画面に反映
+   * ステータスが「完了」になったときはcompletedAtを設定し、
+   * 「完了」から「未着手」に変更された際はcompletedAtを削除する
    *
    * @param item - ステータスを変更するアイテム
    */
@@ -219,10 +221,30 @@ export function useBacklogItems({
     )
 
     try {
+      // completedAtの更新値を決定
+      // ステータスが「完了」になったときは現在の日時を設定
+      // 「完了」から「未着手」に変更された際はnullを設定
+      let completedAt: Date | null | undefined = undefined
+      if (nextStatus === 'completed') {
+        // ステータスが「完了」になった場合、completedAtを現在の日時に設定
+        completedAt = new Date()
+      } else if (item.status === 'completed' && nextStatus === 'not_started') {
+        // 「完了」から「未着手」に変更された場合、completedAtをnullに設定
+        completedAt = null
+      }
+
       // Server Actionを呼び出してアイテムを更新
-      const updatedItem = await updateBacklogItemAction(item.id, {
+      const updatePayload: {
+        status: typeof nextStatus
+        completedAt?: Date | null
+      } = {
         status: nextStatus,
-      })
+      }
+      if (completedAt !== undefined) {
+        updatePayload.completedAt = completedAt
+      }
+
+      const updatedItem = await updateBacklogItemAction(item.id, updatePayload)
 
       // サーバーから返された最新の状態で更新
       setBacklogItems((prevItems) =>

@@ -32,6 +32,7 @@ import dayjs from 'dayjs'
  * 取得条件:
  * - dueDateがnullのアイテム（期限のないアイテム）
  * - 削除されていないアイテム（deletedAtがnull）
+ * - 完了日が本日0時より前のアイテムは除外（completedAtがnull、または本日0時以降）
  * - orderで降順ソート（スタック構造：新しく追加したものが上）
  *
  * @returns BacklogItemの配列
@@ -46,12 +47,20 @@ export async function getBacklogItems(): Promise<BacklogItem[]> {
     }
     const userId = user.id
 
+    // 本日の開始時刻を計算（完了日が本日0時より前のアイテムを除外するため）
+    const todayStart = dayjs().startOf('day').toDate()
+
     // データベースからBacklogアイテムを取得
     const items = await prisma.item.findMany({
       where: {
         userId,
         dueDate: null, // 期限のないアイテムのみ
         deletedAt: null, // 削除されていないアイテムのみ
+        // 完了日がnull（未完了）、または本日0時以降のアイテムのみ取得
+        OR: [
+          { completedAt: null }, // 未完了のアイテム
+          { completedAt: { gte: todayStart } }, // 本日0時以降に完了したアイテム
+        ],
       },
       orderBy: {
         order: 'desc', // orderで降順ソート（スタック構造）
@@ -65,6 +74,7 @@ export async function getBacklogItems(): Promise<BacklogItem[]> {
         title: item.title,
         status: mapItemStatusToUI(item.status),
         order: item.order,
+        completedAt: item.completedAt, // デバッグ用
       }
     })
 
@@ -143,6 +153,7 @@ export async function addBacklogItem(title: string): Promise<BacklogItem> {
       title: newItem.title,
       status: mapItemStatusToUI(newItem.status),
       order: newItem.order,
+      completedAt: newItem.completedAt, // デバッグ用
     }
   } catch (error) {
     // エラーログを出力
@@ -164,13 +175,15 @@ export async function addBacklogItem(title: string): Promise<BacklogItem> {
  * Backlogアイテム（やりたいこと）を更新
  *
  * @param id - 更新するアイテムのID
- * @param updates - 更新する内容（title, status, orderのいずれか）
+ * @param updates - 更新する内容（title, status, order, completedAtのいずれか）
  * @returns 更新されたBacklogItem
  * @throws 認証エラー、バリデーションエラーまたはデータベースエラーが発生した場合
  */
 export async function updateBacklogItem(
   id: string,
-  updates: Partial<Pick<BacklogItem, 'title' | 'status' | 'order'>>,
+  updates: Partial<Pick<BacklogItem, 'title' | 'status' | 'order'>> & {
+    completedAt?: Date | null
+  },
 ): Promise<BacklogItem> {
   try {
     // 認証状態を確認し、認証済みユーザーのIDを取得
@@ -201,6 +214,11 @@ export async function updateBacklogItem(
       updateData.order = updates.order
     }
 
+    // completedAtが指定されている場合は更新
+    if (updates.completedAt !== undefined) {
+      updateData.completedAt = updates.completedAt
+    }
+
     // アイテムが存在し、かつユーザーが所有していることを確認してから更新
     const existingItem = await prisma.item.findFirst({
       where: {
@@ -229,6 +247,7 @@ export async function updateBacklogItem(
       title: updatedItem.title,
       status: mapItemStatusToUI(updatedItem.status),
       order: updatedItem.order,
+      completedAt: updatedItem.completedAt, // デバッグ用
     }
   } catch (error) {
     // エラーログを出力
