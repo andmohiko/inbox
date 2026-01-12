@@ -92,7 +92,7 @@ export async function getInboxItems(date: Date | string): Promise<InboxItem[]> {
         ],
       },
       orderBy: {
-        order: 'asc', // orderで昇順ソート
+        createdAt: 'desc', // createdAtで降順ソート
       },
     })
 
@@ -115,6 +115,7 @@ export async function getInboxItems(date: Date | string): Promise<InboxItem[]> {
         status: mapItemStatusToUI(item.status),
         date: dateString,
         order: item.order,
+        createdAt: item.createdAt,
       }
     })
 
@@ -206,6 +207,7 @@ export async function addInboxItem(
       status: mapItemStatusToUI(newItem.status),
       date: dateString,
       order: newItem.order,
+      createdAt: newItem.createdAt,
     }
   } catch (error) {
     // エラーログを出力
@@ -312,6 +314,7 @@ export async function updateInboxItem(
       status: mapItemStatusToUI(updatedItem.status),
       date: dateString,
       order: updatedItem.order,
+      createdAt: updatedItem.createdAt,
     }
   } catch (error) {
     // エラーログを出力

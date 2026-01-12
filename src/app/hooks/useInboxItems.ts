@@ -290,11 +290,9 @@ export function useInboxItems({
     }
   }
 
-  // ソート済みのアイテムリスト（メモ化してパフォーマンス最適化）
-  const currentItems = useMemo(
-    () => [...inboxItems].sort((a, b) => a.order - b.order),
-    [inboxItems],
-  )
+  // アイテムリストをそのまま返す
+  // データベースからの取得時に createdAt の降順でソート済み
+  const currentItems = useMemo(() => inboxItems, [inboxItems])
 
   /**
    * Inboxのデータを再取得（現在の日付）

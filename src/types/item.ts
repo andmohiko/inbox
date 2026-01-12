@@ -46,6 +46,11 @@ export interface InboxItem {
    * 表示順序
    */
   order: number
+
+  /**
+   * 作成日時
+   */
+  createdAt: Date
 }
 
 /**
